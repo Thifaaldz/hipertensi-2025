@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\MlController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use Illuminate\Support\Facades\Response;
@@ -7,7 +8,6 @@ use Illuminate\Support\Facades\Response;
 /* NOTE: Do Not Remove
 / Livewire asset handling if using sub folder in domain
 */
-
 Livewire::setUpdateRoute(function ($handle) {
     return Route::post(config('app.asset_prefix') . '/livewire/update', $handle);
 });
@@ -18,6 +18,13 @@ Livewire::setScriptRoute(function ($handle) {
 /*
 / END
 */
+
 Route::get('/', function () {
     return view('welcome');
+});
+
+// ✅ API ML diletakkan di luar route `/`
+Route::middleware(['filament'])->group(function () {
+    Route::get('/admin/api/ml/geojson', [MlController::class, 'geojson'])->name('admin.ml.geojson');
+    Route::get('/admin/api/ml/predictions', [MlController::class, 'predictionsJson'])->name('admin.ml.predictions');
 });
