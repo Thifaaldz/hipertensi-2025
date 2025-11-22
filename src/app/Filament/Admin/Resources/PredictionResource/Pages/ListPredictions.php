@@ -10,6 +10,8 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ListPredictions extends ListRecords
 {
@@ -19,11 +21,6 @@ class ListPredictions extends ListRecords
     {
         return [
 
-            /*
-            |--------------------------------------------------------------------------
-            | Jalankan ML dari dataset yang ada
-            |--------------------------------------------------------------------------
-            */
             Action::make('run_ml')
                 ->label('Jalankan ML')
                 ->icon('heroicon-o-play')
@@ -32,28 +29,25 @@ class ListPredictions extends ListRecords
 
                     Artisan::call('ml:predict');
 
-                    $output = Artisan::output();
-
                     Notification::make()
                         ->title('ML selesai dijalankan')
-                        ->body(nl2br($output))
+                        ->body(nl2br(Artisan::output()))
                         ->success()
                         ->send();
                 }),
 
-            /*
-            |--------------------------------------------------------------------------
-            | Upload dataset baru + langsung jalankan ML
-            |--------------------------------------------------------------------------
-            */
             Action::make('upload_new_dataset')
                 ->label('Upload Dataset Baru & Jalankan ML')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->form([
                     FileUpload::make('dataset')
-                        ->label('Upload Dataset (CSV)')
-                        ->acceptedFileTypes(['text/csv'])
-                        ->directory('ml_input')
+                        ->label('Upload Dataset (XLSX/CSV)')
+                        ->acceptedFileTypes([
+                            'text/csv',
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                        ])
+                        ->directory('ml_input/uploads')
+                        ->disk('private') // ✅ penting
                         ->preserveFilenames()
                         ->required(),
                 ])
@@ -63,23 +57,46 @@ class ListPredictions extends ListRecords
                         throw new Exception('Harap upload file terlebih dahulu.');
                     }
 
-                    $uploaded = storage_path('app/' . $data['dataset']);
+                    // ✅ Ambil path file hasil upload
+                    $uploadedPath = Storage::disk('private')->path($data['dataset']);
 
-                    if (! file_exists($uploaded)) {
-                        throw new Exception("File upload tidak ditemukan: {$uploaded}");
+                    if (! file_exists($uploadedPath)) {
+                        throw new Exception("File upload tidak ditemukan: {$uploadedPath}");
                     }
 
-                    // replace dataset utama
-                    copy($uploaded, storage_path('app/ml_input/dataset.csv'));
+                    // ✅ lokasi dataset utama CSV
+                    $mainCsv = storage_path('app/ml_input/dataset.csv');
 
-                    // jalankan ML
+                    // ✅ buat folder arsip jika belum ada
+                    $archiveDir = storage_path('app/ml_input/archive');
+                    if (! is_dir($archiveDir)) {
+                        mkdir($archiveDir, 0755, true);
+                    }
+
+                    // ✅ arsipkan dataset lama jika ada
+                    if (file_exists($mainCsv)) {
+                        $timestamp = now()->format('Ymd_His');
+                        rename($mainCsv, $archiveDir . "/dataset_{$timestamp}.csv");
+                    }
+
+                    // ✅ jika upload masih XLSX → convert ke CSV
+                    if (str_ends_with($uploadedPath, '.xlsx')) {
+
+                        $spreadsheet = IOFactory::load($uploadedPath);
+                        $csvWriter = IOFactory::createWriter($spreadsheet, 'Csv');
+                        $csvWriter->save($mainCsv);
+
+                    } else {
+                        // ✅ jika CSV langsung replace
+                        copy($uploadedPath, $mainCsv);
+                    }
+
+                    // ✅ jalankan ML setelah replace dataset
                     Artisan::call('ml:predict');
-
-                    $output = Artisan::output();
 
                     Notification::make()
                         ->title('Dataset Baru Dipasang & ML Dijalankan')
-                        ->body(nl2br($output))
+                        ->body(nl2br(Artisan::output()))
                         ->success()
                         ->send();
                 }),

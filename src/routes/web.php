@@ -19,9 +19,15 @@ Livewire::setScriptRoute(function ($handle) {
 / END
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+//Route::get('/', function () {
+//    return view('welcome');
+//});
+
+use App\Http\Livewire\HomeMap;
+use App\Livewire\HomePage;
+
+Route::get('/', HomePage::class)->name('home');
+
 
 // ✅ API ML diletakkan di luar route `/`
 Route::middleware(['filament'])->group(function () {
