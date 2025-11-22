@@ -8,7 +8,7 @@ class Prediction extends Model
 {
         protected $fillable = [
         'kecamatan','wilayah','tahun','persentase','prioritas','lat','lon',
-        'predicted_route','focus_month','focus_date','meta'
+        'predicted_route','focus_month','focus_date','meta','is_archived'
     ];
 
     protected $casts = [

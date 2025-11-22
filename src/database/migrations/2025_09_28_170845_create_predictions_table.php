@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('predicted_route')->nullable();
             $table->string('focus_month')->nullable();
             $table->date('focus_date')->nullable();
+            $table->boolean('is_archived')->default(false);
             $table->json('meta')->nullable(); // additional info
             $table->timestamps();
         });

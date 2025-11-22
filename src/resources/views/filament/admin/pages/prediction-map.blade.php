@@ -9,12 +9,12 @@
 
     <div id="map"></div>
 
-    {{-- Leaflet CSS & JS tanpa integrity --}}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+
             const map = L.map('map').setView([-6.2, 106.8], 10);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -22,15 +22,16 @@
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
-            const predictions = @json($this->getPredictions());
-            console.log("Predictions data:", predictions);
+            const predictions = @json($this->predictions);
+            console.log("Predictions:", predictions);
 
-            if (predictions.length === 0) {
-                alert("⚠️ Tidak ada data prediksi dengan lat/lon");
+            if (!predictions.length) {
+                alert("⚠️ Tidak ada data prediksi dengan koordinat");
                 return;
             }
 
             const markers = [];
+
             predictions.forEach(item => {
                 if (item.lat && item.lon) {
                     const marker = L.circleMarker([item.lat, item.lon], {
